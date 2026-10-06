@@ -1,0 +1,49 @@
+C4Component
+    title Component Diagram: Checkout & Inventory Boundary
+    
+    Container_Boundary(api_gw, "API Gateway") {
+        Component(auth_filter, "Authentication Filter", "Middleware", "Validates JWT tokens from IdP")
+        Component(router, "Request Router", "Middleware", "Routes to internal services")
+    }
+    
+    Container_Boundary(checkout_svc, "Checkout Service") {
+        Component(checkout_orch, "Checkout Orchestrator", "Controller", "Manages the saga/workflow for checkout")
+        Component(cart_client, "Cart Client", "gRPC/HTTP Client", "Fetches cart details")
+        Component(sale_client, "Sale Client", "gRPC/HTTP Client", "Validates deals & pricing")
+        Component(inv_client, "Inventory Client", "gRPC/HTTP Client", "Requests inventory reservation")
+        Component(pay_client, "Payment Client", "gRPC/HTTP Client", "Initiates payment")
+        Component(outbox_store, "Transactional Outbox", "Database/Repository", "Durably stores CheckoutCompleted event with checkout state")
+        Component(event_pub, "Outbox Publisher", "Messaging Producer", "Relays outbox events to Broker reliably")
+    }
+    
+    Container_Boundary(inv_svc, "Inventory Service") {
+        Component(inv_controller, "Inventory Controller", "REST/gRPC API", "Handles incoming reservation & release requests")
+        Component(concurrency_mgr, "Concurrency Manager", "Service Logic", "Ensures strict safe reservations")
+        Component(inv_store, "Inventory Store", "Repository", "Manages available/sold counts")
+        Component(res_store, "Reservation Store", "Repository", "Manages temporary holds and expiry")
+    }
+    
+    Container_Boundary(order_svc, "Order Service") {
+        Component(order_listener, "Order Event Listener", "Messaging Consumer", "Listens for CheckoutCompleted")
+        Component(order_manager, "Order Manager", "Service Logic", "Manages order state machine")
+        Component(order_pub, "Order Event Publisher", "Messaging Producer", "Publishes OrderConfirmed")
+    }
+
+    Rel(auth_filter, router, "Passes authenticated request")
+    Rel(router, checkout_orch, "Routes POST /checkout")
+    
+    Rel(checkout_orch, cart_client, "1. Get Cart")
+    Rel(checkout_orch, sale_client, "2. Validate Pricing")
+    Rel(checkout_orch, inv_client, "3. Reserve Items")
+    Rel(checkout_orch, pay_client, "4. Process Payment")
+    Rel(checkout_orch, outbox_store, "5. Save State & Event (Local Tx)")
+    Rel(outbox_store, event_pub, "6. Relay Event")
+    
+    Rel(inv_client, inv_controller, "Sync/gRPC")
+    Rel(inv_controller, concurrency_mgr, "Delegates")
+    Rel(concurrency_mgr, inv_store, "Checks/Updates")
+    Rel(concurrency_mgr, res_store, "Creates/Releases hold")
+    
+    Rel(event_pub, order_listener, "Via Message Broker")
+    Rel(order_listener, order_manager, "Triggers order creation")
+    Rel(order_manager, order_pub, "Publishes downstream events (to Fulfilment/Notification)")

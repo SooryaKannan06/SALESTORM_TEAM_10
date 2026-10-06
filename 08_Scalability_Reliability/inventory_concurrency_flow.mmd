@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    actor User as Client / User Thread (10,000 Concurrent)
+    participant Gateway as API Gateway (Envoy)
+    participant VWR as Virtual Waiting Room
+    participant InvSvc as Inventory Service
+    participant Redis as Redis Cluster ({product_1001})
+    participant DB as PostgreSQL (Durable Store)
+    participant Kafka as Kafka Event Bus
+
+    User->>Gateway: POST /api/v1/reservations (Idempotency-Key: UUID)
+    Gateway->>Gateway: Check IP/User Rate Limit (Token Bucket)
+    Gateway->>VWR: Validate Admission Token
+    VWR-->>Gateway: Token Valid
+    Gateway->>InvSvc: Forward Reservation Request
+    
+    InvSvc->>Redis: EVALSHA reserve_inventory.lua (stock_key, res_hash, idem_key)
+    
+    alt Stock Available (First 100 Reqs)
+        Redis->>Redis: DECRBY stock_key 1 (Stock > 0)
+        Redis->>Redis: HSET res_hash idem_key payload (RESERVED)
+        Redis-->>InvSvc: Return SUCCESS (Reservation ID: res_9981)
+        InvSvc-->>Gateway: HTTP 201 Created { reservation_id, status: "RESERVED" }
+        Gateway-->>User: HTTP 201 Created
+        
+        InvSvc->>DB: Async Write Local Outbox Event (RESERVATION_CREATED)
+        InvSvc->>Kafka: Outbox Poller Publishes `salestorm.reservation.created`
+    else Stock Depleted (Remaining 9,900 Reqs)
+        Redis-->>InvSvc: Return SOLD_OUT (Stock == 0)
+        InvSvc-->>Gateway: HTTP 409 Conflict { error: "SOLD_OUT" }
+        Gateway-->>User: HTTP 409 Conflict ("Flash Sale Stock Depleted")
+    end

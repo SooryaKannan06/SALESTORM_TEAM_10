@@ -1,0 +1,49 @@
+graph TD
+    %% External Entities
+    Client[Customer / Web / Mobile]
+    CDN[CDN & WAF]
+    PG[Payment Gateway]
+    SP[Shipping Provider]
+    NP[Notification Provider]
+
+    %% Edge
+    Client -->|HTTPS| CDN
+    CDN -->|Filtered Traffic| LB[Load Balancer]
+    LB --> APIG[API Gateway]
+
+    %% Business Services (Sync Domain)
+    APIG -->|Reads| ProductSvc[Product Service]
+    APIG -->|Reads/Writes| CartSvc[Cart Service]
+    APIG -->|Reads| SaleSvc[Sale Service]
+    APIG -->|Checkout Request| CheckoutSvc[Checkout Service]
+
+    %% Checkout Orchestration
+    CheckoutSvc -->|1. Reserve| InvSvc[Inventory Service]
+    CheckoutSvc -->|2. Process Payment| PaySvc[Payment Service]
+    
+    %% Async Domain (Transactional Outbox)
+    CheckoutSvc -->|3. Save State & Event| Outbox[(Transactional Outbox)]
+    Outbox -->|4. Publish Reliably| Broker[(Message Broker)]
+    InvSvc -.->|Release/Expiry Events| Broker
+    
+    Broker -->|Consume CheckoutCompleted| OrderSvc[Order Service]
+    Broker -->|Consume OrderConfirmed| FulfSvc[Fulfilment Service]
+    Broker -->|Consume OrderConfirmed| NotifSvc[Notification Service]
+
+    %% External Integrations
+    PaySvc -->|Sync API| PG
+    FulfSvc -->|Sync API| SP
+    NotifSvc -->|Sync API| NP
+
+    %% Styling
+    classDef external fill:#eee,stroke:#333,stroke-width:2px;
+    classDef edge fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef syncSvc fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef asyncSvc fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef infra fill:#fbf,stroke:#333,stroke-width:2px;
+
+    class Client,PG,SP,NP external;
+    class CDN,LB,APIG edge;
+    class ProductSvc,CartSvc,SaleSvc,CheckoutSvc,InvSvc,PaySvc syncSvc;
+    class OrderSvc,FulfSvc,NotifSvc asyncSvc;
+    class Broker,Outbox infra;

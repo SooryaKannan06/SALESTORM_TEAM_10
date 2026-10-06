@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> AVAILABLE : Stock Loaded (Qty = 100)
+
+    AVAILABLE --> RESERVED : Atomic Lua Decrement\n(10-Min TTL Started)
+    
+    state RESERVED {
+        [*] --> PendingPayment
+        PendingPayment --> PAYMENT_PENDING : User Initiates Checkout
+    }
+
+    PAYMENT_PENDING --> CONFIRMED : Payment Gateway Success
+    PAYMENT_PENDING --> PAYMENT_FAILED : Payment Gateway Declined
+    
+    RESERVED --> TIMEOUT : 600s Pass Without Payment
+    
+    PAYMENT_FAILED --> RELEASED : Compensation Lua INCR (+1 Stock)
+    TIMEOUT --> RELEASED : Delay Queue Sweeper Lua INCR (+1 Stock)
+
+    RELEASED --> AVAILABLE : Stock Restored to Pool
+
+    CONFIRMED --> SOLD : Order Service Creates Order & Ships
+
+    SOLD --> [*]

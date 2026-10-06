@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    actor Customer as User / Retrying Client
+    participant CheckoutSvc as Checkout Service (Recovering)
+    participant CheckoutDB as Checkout Local DB & Outbox
+    participant PaySvc as Payment Service
+    participant PayDB as Payment Local DB
+    participant Relay as Outbox Relay Worker
+    participant Broker as Message Broker
+    participant OrderSvc as Order Service
+
+    Note over CheckoutSvc,PaySvc: FAILURE WINDOW OCCURRED:<br/>Payment succeeded at Gateway, PayDB has status='CAPTURED',<br/>but Checkout node crashed before writing checkout_outbox!
+
+    Customer->>CheckoutSvc: POST /api/v1/checkout (Same Idempotency-Key)
+    activate CheckoutSvc
+    CheckoutSvc->>CheckoutDB: SELECT * FROM checkout_attempts WHERE idempotency_key = ...
+    Note over CheckoutSvc: Status found: 'PROCESSING_PAYMENT' (Unsettled local state)
+
+    CheckoutSvc->>PaySvc: GET /v1/payments/status?checkout_id=chk_123
+    activate PaySvc
+    PaySvc->>PayDB: SELECT status, tx_id FROM payment_transactions WHERE checkout_id = 'chk_123'
+    PayDB-->>PaySvc: Found record: status='CAPTURED', tx_id='tx_999'
+    PaySvc-->>CheckoutSvc: 200 OK: PaymentStatusResponse(status=SUCCESS, tx_id='tx_999')
+    deactivate PaySvc
+
+    critical Local Recovery Transaction
+        CheckoutSvc->>CheckoutDB: UPDATE checkout_attempts SET status='SUCCESS'<br/>AND INSERT INTO checkout_outbox (event='CheckoutCompleted')
+    end
+
+    CheckoutSvc-->>Customer: 200 OK: Payment successful; order creation pending
+    deactivate CheckoutSvc
+
+    Relay->>CheckoutDB: Poll unpublished events
+    Relay->>Broker: Publish "CheckoutCompleted"
+    Broker--)OrderSvc: Consume "CheckoutCompleted"
+    OrderSvc->>OrderSvc: Asynchronously create Order aggregate
+    OrderSvc->>Broker: Publish "OrderConfirmed"

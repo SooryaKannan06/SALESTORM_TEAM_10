@@ -1,0 +1,68 @@
+sequenceDiagram
+    autonumber
+    actor Customer as User / Client App
+    participant APIGW as API Gateway
+    participant CheckoutSvc as Checkout Service (Orchestrator)
+    participant CheckoutDB as Checkout Local DB & Outbox
+    participant InvSvc as Inventory Service
+    participant PaySvc as Payment Service
+    participant Relay as Outbox Relay Worker
+    participant Broker as Message Broker (Kafka / RabbitMQ)
+    participant OrderSvc as Order Service
+    participant Downstream as Fulfilment & Notification
+
+    Customer->>APIGW: POST /api/v1/checkout (Items, PaymentToken, Idempotency-Key)
+    activate APIGW
+    APIGW->>CheckoutSvc: ExecuteCheckout(Command)
+    activate CheckoutSvc
+
+    CheckoutSvc->>CheckoutDB: INSERT INTO checkout_attempts (status='INITIATED')
+
+    critical [SYNC] Synchronous Inventory Reservation
+        CheckoutSvc->>InvSvc: gRPC/REST: ReserveStock(checkout_id, items, reservation_ttl)
+        activate InvSvc
+        Note over InvSvc: Concurrency strategy applied<br/>(Authority: Member 4)
+        
+        alt Stock Available
+            InvSvc-->>CheckoutSvc: 200 OK: ReservationResult(status=HELD, res_id="res_99")
+            CheckoutSvc->>CheckoutDB: UPDATE checkout_attempts SET status='INVENTORY_RESERVED'
+        else Out of Stock
+            InvSvc-->>CheckoutSvc: 409 Conflict: Out of Stock
+            CheckoutSvc->>CheckoutDB: UPDATE checkout_attempts SET status='FAILED_OUT_OF_STOCK'
+            CheckoutSvc-->>APIGW: 409 Conflict: Items Out of Stock
+            APIGW-->>Customer: 409 Conflict: Items Out of Stock
+        end
+        deactivate InvSvc
+    end
+
+    critical [SYNC] Synchronous Payment Processing
+        CheckoutSvc->>PaySvc: POST /v1/payments (checkout_id, amount, token, Idempotency-Key)
+        activate PaySvc
+        Note over PaySvc: Authoritative financial transaction<br/>& Gateway interaction
+        PaySvc-->>CheckoutSvc: 200 OK: PaymentResult(status=SUCCESS, tx_id="tx_123")
+        deactivate PaySvc
+    end
+
+    critical Local Atomic Transaction (Checkout Boundary)
+        CheckoutSvc->>CheckoutDB: UPDATE checkout_attempts SET status='SUCCESS'<br/>AND INSERT INTO checkout_outbox (event='CheckoutCompleted')
+    end
+
+    CheckoutSvc-->>APIGW: 200 OK (checkout_id, status='SUCCESS')
+    deactivate CheckoutSvc
+    APIGW-->>Customer: 200 OK: Payment successful; order creation pending
+    deactivate APIGW
+
+    par [ASYNC] Event Relay to Broker
+        Relay->>CheckoutDB: Poll unpublished outbox events
+        Relay->>Broker: Publish "CheckoutCompleted" (Topic: checkout.events)
+        Relay->>CheckoutDB: Mark outbox event as PROCESSED
+    and [ASYNC] Order Generation
+        Broker--)OrderSvc: Consume "CheckoutCompleted"
+        activate OrderSvc
+        Note over OrderSvc: Order Service asynchronously creates & manages Order
+        OrderSvc->>OrderSvc: Construct Order aggregate & persist to Order DB
+        OrderSvc->>Broker: Publish "OrderConfirmed" (Topic: order.events)
+        deactivate OrderSvc
+        
+        Broker--)Downstream: Trigger Fulfilment Dispatch & Customer Notifications
+    end

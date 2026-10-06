@@ -1,0 +1,26 @@
+flowchart TD
+    Req[Incoming Microservice Call] --> CB{Circuit Breaker State}
+    
+    CB -- OPEN --> FastFail[Fast Fail: Return HTTP 503 / Fallback Response immediately]
+    
+    CB -- HALF-OPEN --> Trial[Execute Trial Request (10% Traffic)]
+    Trial -- Trial Succeeds --> CloseCB[Transition to CLOSED]
+    Trial -- Trial Fails --> OpenCB[Transition to OPEN]
+    
+    CB -- CLOSED --> Exec[Execute Call with Timeout Budget]
+    
+    Exec --> TimeoutCheck{Completed within Timeout?}
+    
+    TimeoutCheck -- No Timeout Exceeded --> TimeoutErr[Trigger Timeout Exception]
+    TimeoutErr --> RetryCheck
+    
+    TimeoutCheck -- Yes Success --> ReturnOK[Return Successful Payload]
+    
+    Exec --> ResCheck{HTTP 5xx / Network Error?}
+    ResCheck -- Yes --> RetryCheck{Retry Attempt < Max Retries?}
+    ResCheck -- No --> ReturnOK
+    
+    RetryCheck -- Yes --> Backoff[Calculate Full Jitter Exponential Backoff\nt_sleep = random(0, min(t_max, t_base * 2^n))]
+    Backoff --> Exec
+    
+    RetryCheck -- No Max Retries Exceeded --> Fallback[Trigger Fallback Strategy\n(Deferred Payment Queue / Cached Graceful Response)]

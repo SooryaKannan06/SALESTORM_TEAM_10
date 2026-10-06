@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> CONFIRMED : Order Service consumes CheckoutCompleted event
+
+    CONFIRMED --> PROCESSING : Warehouse WMS acknowledges packing order
+    PROCESSING --> SHIPPED : Logistics carrier scans package & assigns tracking
+    SHIPPED --> DELIVERED : Final delivery signature confirmed
+
+    CONFIRMED --> CANCELLED : Customer cancellation before warehouse packing
+    PROCESSING --> CANCELLED : Warehouse discrepancy / item damaged before dispatch
+    
+    CANCELLED --> REFUNDED : Payment refund saga triggered
+    DELIVERED --> REFUNDED : Return Merchandise Authorization (RMA) approved
+
+    DELIVERED --> [*]
+    REFUNDED --> [*]

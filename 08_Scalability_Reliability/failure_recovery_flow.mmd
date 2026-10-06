@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    participant PaySvc as Payment Service
+    participant PayDB as Payment Local DB (Outbox)
+    participant Kafka as Kafka Event Broker
+    participant OrdSvc as Order Service (CRASHED for 30s)
+    participant OrdDB as Order PostgreSQL DB
+
+    Note over PaySvc, OrdSvc: Scenario: Order Service Outage for 30 Seconds
+
+    PaySvc->>PaySvc: Webhook Received (Payment SUCCESS)
+    PaySvc->>PayDB: Local Tx: Update Payment state = CONFIRMED, Insert Outbox Event
+    
+    PaySvc->>OrdSvc: Direct gRPC Call: createOrder()
+    OrdSvc--xPaySvc: Connection Refused (Service Down)
+    
+    Note over PaySvc: Fallback Triggered: Outbox Retries Active
+    
+    loop Every 2s (Exponential Backoff)
+        PayDB->>Kafka: Outbox Sweeper publishes `salestorm.payment.completed`
+        Kafka--xOrdSvc: Delivery Fails (Consumer Group Inactive)
+    end
+
+    Note over OrdSvc: T = 30s: Kubernetes Restarts Order Service Pod
+
+    OrdSvc->>Kafka: Re-joins Consumer Group `order-service-group`
+    Kafka->>OrdSvc: Delivers Pending Event Offset `salestorm.payment.completed`
+    
+    OrdSvc->>OrdDB: INSERT INTO orders (reservation_id, status) VALUES ('res_9981', 'CONFIRMED')
+    alt Success First Processing
+        OrdDB-->>OrdSvc: 1 Row Inserted
+    else Duplicate Event (Idempotent Retry)
+        OrdDB-->>OrdSvc: ON CONFLICT (reservation_id) DO NOTHING
+    end
+
+    OrdSvc->>Kafka: Commit Consumer Offset
+    Note over OrdSvc: 100% Recovery Completed with Zero Data Loss

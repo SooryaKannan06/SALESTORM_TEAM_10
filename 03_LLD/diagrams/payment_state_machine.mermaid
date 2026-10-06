@@ -1,0 +1,17 @@
+stateDiagram-v2
+    [*] --> INITIATED : Payment request received from Checkout Service
+
+    INITIATED --> PENDING_3DS : Gateway requires SCA / OTP challenge
+    INITIATED --> AUTHORIZED : Direct pre-authorization succeeds
+    INITIATED --> DECLINED : Gateway declines (insufficient funds, expired card)
+    INITIATED --> FAILED : Gateway unreachable / System error
+
+    PENDING_3DS --> AUTHORIZED : Customer completes OTP challenge (Webhook verified)
+    PENDING_3DS --> DECLINED : Customer fails OTP / 3DS challenge times out
+
+    AUTHORIZED --> CAPTURED : Auto-capture confirmed by gateway
+    CAPTURED --> REFUNDED : Full refund credited back to customer
+
+    DECLINED --> [*]
+    FAILED --> [*]
+    REFUNDED --> [*]

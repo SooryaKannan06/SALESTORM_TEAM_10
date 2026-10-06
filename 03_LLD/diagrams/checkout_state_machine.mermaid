@@ -1,0 +1,20 @@
+stateDiagram-v2
+    [*] --> INITIATED : Customer posts checkout request
+
+    INITIATED --> RESERVING_INVENTORY : Synchronous gRPC call to Inventory Service
+    
+    RESERVING_INVENTORY --> INVENTORY_RESERVED : Inventory Service returns status=HELD
+    RESERVING_INVENTORY --> FAILED_OUT_OF_STOCK : Inventory Service returns 409 Out of Stock
+    
+    INVENTORY_RESERVED --> PROCESSING_PAYMENT : Synchronous call to Payment Service
+    
+    PROCESSING_PAYMENT --> SUCCESS : Payment Service returns SUCCESS (Outbox written)
+    PROCESSING_PAYMENT --> FAILED_PAYMENT_DECLINED : Card declined / Insufficient funds
+    PROCESSING_PAYMENT --> FAILED_TIMEOUT : Gateway timeout (Triggers reconciliation)
+
+    FAILED_TIMEOUT --> SUCCESS : Status recovery finds Payment was CAPTURED
+    FAILED_TIMEOUT --> FAILED_PAYMENT_DECLINED : Status recovery confirms failure
+
+    SUCCESS --> [*]
+    FAILED_OUT_OF_STOCK --> [*]
+    FAILED_PAYMENT_DECLINED --> [*]

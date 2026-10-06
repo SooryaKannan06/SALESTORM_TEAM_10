@@ -1,0 +1,37 @@
+flowchart LR
+    subgraph Microservices [Application Microservices Tier]
+        App1[Inventory Pods]
+        App2[Payment Pods]
+        App3[Order Pods]
+    end
+
+    subgraph TelemetryCollectors [OpenTelemetry Collection Layer]
+        OTelMetrics[OTel Metrics Exporter]
+        OTelTraces[OTel Trace Exporter]
+        OTelLogs[OTel Log Exporter (LogSanitizer)]
+    end
+
+    Microservices --> OTelMetrics
+    Microservices --> OTelTraces
+    Microservices --> OTelLogs
+
+    subgraph StorageEngine [Observability Storage Engine]
+        Prometheus[(Prometheus Server - TimeSeries)]
+        Tempo[(Grafana Tempo / Jaeger - Traces)]
+        Loki[(Grafana Loki - Log Engine)]
+    end
+
+    OTelMetrics --> Prometheus
+    OTelTraces --> Tempo
+    OTelLogs --> Loki
+
+    subgraph Visualization [Visualization & Alerting Command Center]
+        Grafana[Grafana Unified Dashboards]
+        Alertmgr[Alertmanager / PagerDuty]
+    end
+
+    Prometheus --> Grafana
+    Tempo --> Grafana
+    Loki --> Grafana
+
+    Prometheus --> Alertmgr

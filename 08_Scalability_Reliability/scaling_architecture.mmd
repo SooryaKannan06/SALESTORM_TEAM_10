@@ -1,0 +1,51 @@
+flowchart TD
+    Client[Incoming Surge 500k req/s] --> WAF[Cloudflare WAF / Edge DDoS Protection]
+    
+    subgraph GatewayCluster [API Gateway Layer - K8s HPA 10 to 80 Pods]
+        GW1[Envoy Pod 1]
+        GW2[Envoy Pod 2]
+        GWN[Envoy Pod N]
+    end
+
+    WAF --> GatewayCluster
+
+    subgraph AdmissionLayer [Backpressure & Admission]
+        VWR[Virtual Waiting Room / Token Bucket]
+    end
+
+    GatewayCluster --> AdmissionLayer
+
+    subgraph Microservices [Stateless Application Pods - K8s HPA 15 to 120 Pods]
+        Inv1[Inventory Service Pod 1]
+        Inv2[Inventory Service Pod 2]
+        InvN[Inventory Service Pod N]
+    end
+
+    AdmissionLayer --> Microservices
+
+    subgraph CacheCluster [Redis Cluster - 16 Master Shards]
+        Redis1[Shard 1: {prod_1001}]
+        Redis2[Shard 2: {prod_1002}]
+        RedisN[Shard 16: {prod_1600}]
+    end
+
+    Microservices -- Atomic Lua Fast Path --> CacheCluster
+
+    subgraph Messaging [Apache Kafka Broker Cluster]
+        Topic1[salestorm.reservation.events]
+        Topic2[salestorm.payment.events]
+    end
+
+    Microservices -- Async Transactional Outbox --> Messaging
+
+    subgraph DBTier [PostgreSQL Database Tier]
+        PgBouncer[PgBouncer Connection Pooler - 5,000 max conns]
+        Primary[PostgreSQL Primary - Writes]
+        Replica1[Read Replica 1]
+        Replica2[Read Replica 2]
+    end
+
+    Microservices --> PgBouncer
+    PgBouncer --> Primary
+    Primary -. Streaming Replication .-> Replica1
+    Primary -. Streaming Replication .-> Replica2

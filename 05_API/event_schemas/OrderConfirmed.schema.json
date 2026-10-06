@@ -1,0 +1,133 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "event_type": {
+      "const": "OrderConfirmed"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "checkout_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "customer_id": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sku": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "integer",
+                "enum": [
+                  1
+                ]
+              },
+              "unit_price_minor": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "sku",
+              "quantity",
+              "unit_price_minor"
+            ]
+          },
+          "minItems": 1
+        },
+        "amount_minor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "currency": {
+          "type": "string"
+        },
+        "delivery_address": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "street": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            },
+            "postal_code": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "street",
+            "city",
+            "state",
+            "postal_code",
+            "country"
+          ]
+        }
+      },
+      "required": [
+        "order_id",
+        "checkout_id",
+        "customer_id",
+        "items",
+        "amount_minor",
+        "currency",
+        "delivery_address"
+      ]
+    }
+  },
+  "required": [
+    "event_id",
+    "schema_version",
+    "occurred_at",
+    "correlation_id",
+    "aggregate_id",
+    "aggregate_version",
+    "event_type",
+    "data"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OrderConfirmed"
+}

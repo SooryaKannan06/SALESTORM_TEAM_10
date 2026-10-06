@@ -1,0 +1,56 @@
+graph TD
+    %% Internet & Edge
+    Internet((Internet))
+    CDN[CDN / WAF Edge Nodes\nProvides Caching & DDoS Protection]
+    
+    %% Ingress
+    Internet -->|HTTPS| CDN
+    CDN -->|Filtered| LB[Cloud Load Balancer\nHigh Availability]
+
+    %% K8s Cluster
+    subgraph K8s[Kubernetes Cluster - Multi-AZ]
+        
+        %% Gateways
+        subgraph IngressLayer[Ingress / API Gateway]
+            AGW1[API Gateway Replica 1]
+            AGW2[API Gateway Replica 2]
+            AGW3[API Gateway Replica N]
+        end
+        LB --> AGW1 & AGW2 & AGW3
+        
+        %% Business Services
+        subgraph StatelessServices[Stateless Business Services (HPA Enabled)]
+            CheckoutPods[Checkout Service Replicas (N, HPA)]
+            InvPods[Inventory Service Replicas (N, HPA)]
+            PayPods[Payment Service Replicas (N, HPA)]
+            OrderPods[Order Service Replicas (N, HPA)]
+            OtherPods[Product/Cart/Sale/Notif Replicas (N, HPA)]
+        end
+        
+        AGW1 & AGW2 & AGW3 --> CheckoutPods & OtherPods
+        CheckoutPods --> InvPods & PayPods
+    end
+
+    %% Infrastructure Data Tier
+    subgraph DataTier[Managed Data Tier - Multi-AZ]
+        Redis[(Distributed Cache Cluster)]
+        Kafka[[Message Broker Cluster]]
+        
+        subgraph DBInfrastructure[HA Relational DB Infrastructure]
+            LogicalDBs[(Logical Schemas:\nProduct, Sale, Inventory, Order, Payment)]
+        end
+    end
+    
+    %% Bottlenecks / External
+    PayGW[External Payment Gateway]
+    
+    %% Connections to Data Tier
+    OtherPods -.-> Redis
+    CheckoutPods & InvPods & PayPods & OrderPods -.-> Kafka
+    InvPods -->|Write Contention / Bottleneck| LogicalDBs
+    OtherPods -->|Reads/Writes| LogicalDBs
+    PayPods -->|Sync Network Bottleneck| PayGW
+    
+    %% Styling
+    classDef cluster fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
+    class K8s,DataTier cluster;

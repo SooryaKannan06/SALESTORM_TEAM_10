@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> AVAILABLE : Initial warehouse stock loaded
+
+    AVAILABLE --> HELD : Synchronous ReserveStock command (configurable reservation TTL)
+    AVAILABLE --> AVAILABLE : Insufficient quantity (Rejected)
+
+    HELD --> COMMITTED : Order fulfillment permanent deduction
+    HELD --> RELEASED : Payment failure / Checkout cancellation compensation
+    HELD --> EXPIRED : TTL timer expires (Background sweep)
+
+    RELEASED --> AVAILABLE : Stock returned to available inventory pool
+    EXPIRED --> AVAILABLE : Stock returned to available inventory pool
+
+    COMMITTED --> [*]

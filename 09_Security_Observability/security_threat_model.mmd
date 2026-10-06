@@ -1,0 +1,48 @@
+flowchart TD
+    subgraph External [Untrusted Internet Zone]
+        Attacker[Attacker / Scalping Botnet]
+        User[Legitimate Buyer]
+    end
+
+    subgraph EdgeSec [Layer 1: Edge Security]
+        WAF[Cloudflare WAF / Bot Management]
+        RateLim[Token Bucket Rate Limiter]
+        PoW[Proof-of-Work Challenge Engine]
+    end
+
+    Attacker -- DDoS / Scalping Script --> WAF
+    User -- HTTPS Request --> WAF
+    WAF -- Challenge Bots --> PoW
+    WAF -- Clean Traffic --> RateLim
+
+    subgraph GatewaySec [Layer 2: API Gateway & Identity]
+        Envoy[Envoy API Gateway]
+        Auth[OAuth2 / JWT RS256 Validator]
+        Revocation[Redis JWT Blacklist]
+    end
+
+    RateLim --> Envoy
+    Envoy --> Auth
+    Auth --> Revocation
+
+    subgraph MeshSec [Layer 3: Internal Microservice Mesh]
+        mTLS[Istio mTLS Encryption & SPIFFE Identity]
+        InvSvc[Inventory Service]
+        PaySvc[Payment Service]
+    end
+
+    Auth -- Valid JWT + X-User-ID --> mTLS
+    mTLS --> InvSvc
+    mTLS --> PaySvc
+
+    subgraph DataSec [Layer 4: Data Protection & Audit]
+        Vault[HashiCorp Vault Secrets Manager]
+        Postgres[(PostgreSQL AES-256 Encrypted)]
+        LogSanitizer[LogSanitizer PII Filter]
+        AuditLog[(WORM S3 Immutable Audit Ledger)]
+    end
+
+    InvSvc --> Postgres
+    InvSvc --> LogSanitizer
+    LogSanitizer --> AuditLog
+    Vault -. Dynamic Credentials .-> InvSvc

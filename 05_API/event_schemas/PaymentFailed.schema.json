@@ -1,0 +1,82 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "event_type": {
+      "const": "PaymentFailed"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "payment_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "checkout_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reservation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "enum": [
+            "DECLINED",
+            "FAILED"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "definitive": {
+          "const": true
+        }
+      },
+      "required": [
+        "payment_id",
+        "checkout_id",
+        "reservation_id",
+        "status",
+        "reason",
+        "definitive"
+      ]
+    }
+  },
+  "required": [
+    "event_id",
+    "schema_version",
+    "occurred_at",
+    "correlation_id",
+    "aggregate_id",
+    "aggregate_version",
+    "event_type",
+    "data"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PaymentFailed"
+}

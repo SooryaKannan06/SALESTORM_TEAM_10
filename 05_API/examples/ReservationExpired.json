@@ -1,0 +1,17 @@
+{
+  "event_id": "55555555-5555-4555-8555-000000000004",
+  "schema_version": 1,
+  "occurred_at": "2026-10-05T06:45:05Z",
+  "correlation_id": "11111111-1111-4111-8111-111111111111",
+  "aggregate_id": "22222222-2222-4222-8222-222222222222",
+  "aggregate_version": 1,
+  "event_type": "ReservationExpired",
+  "data": {
+    "reservation_id": "22222222-2222-4222-8222-222222222222",
+    "checkout_id": "11111111-1111-4111-8111-111111111111",
+    "sku": "FLASH-001",
+    "quantity": 1,
+    "status": "EXPIRED",
+    "expires_at": "2026-10-05T06:45:00Z"
+  }
+}

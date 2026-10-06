@@ -1,0 +1,79 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "event_type": {
+      "const": "ShipmentUpdated"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shipment_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "order_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "enum": [
+            "PENDING",
+            "SHIPPED",
+            "OUT_FOR_DELIVERY",
+            "DELIVERED"
+          ]
+        },
+        "carrier": {
+          "type": "string"
+        },
+        "tracking_number": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "shipment_id",
+        "order_id",
+        "status",
+        "carrier",
+        "tracking_number"
+      ]
+    }
+  },
+  "required": [
+    "event_id",
+    "schema_version",
+    "occurred_at",
+    "correlation_id",
+    "aggregate_id",
+    "aggregate_version",
+    "event_type",
+    "data"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ShipmentUpdated"
+}

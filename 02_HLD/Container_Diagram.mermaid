@@ -1,0 +1,70 @@
+C4Container
+    title Container Diagram for SALESTORM Architecture
+
+    Person(customer, "Customer", "User purchasing flash-sale items")
+    
+    System_Boundary(salestorm, "SALESTORM Platform") {
+        Container(cdn_waf, "CDN & WAF", "Edge Layer", "Caches static assets, product catalogue, and provides DDoS protection")
+        Container(load_balancer, "Load Balancer", "L4/L7 LB", "Distributes traffic across API Gateways")
+        Container(api_gateway, "API Gateway", "API Gateway", "Routes requests, handles rate limiting, authentication (token validation), and load balancing")
+        
+        Container(product_svc, "Product Service", "Stateless Microservice", "Manages product catalogue and details (Highly Cached)")
+        Container(cart_svc, "Cart Service", "Stateless Microservice", "Manages user shopping carts")
+        Container(sale_svc, "Sale Service", "Stateless Microservice", "Manages discounts and promotion rules")
+        Container(checkout_svc, "Checkout Service", "Stateless Microservice", "Orchestrates the checkout workflow (Reserve -> Pay -> Outbox Event)")
+        Container(inventory_svc, "Inventory Service", "Stateless Microservice", "AUTHORITATIVE owner of inventory state. Handles concurrency & reservations")
+        Container(payment_svc, "Payment Service", "Stateless Microservice", "Handles payment intent, processing, and idempotency")
+        Container(order_svc, "Order Service", "Stateless Microservice", "Manages order lifecycle (Created -> Confirmed -> Shipped)")
+        Container(fulfilment_svc, "Fulfilment Service", "Stateless Microservice", "Integrates with logistics")
+        Container(notification_svc, "Notification Service", "Stateless Microservice", "Sends customer alerts")
+        
+        ContainerDb(cache_cluster, "Distributed Cache", "Distributed Cache", "Caches product data and session state")
+        ContainerDb(message_broker, "Message Broker", "Message Broker", "Handles async event streaming. Tech choice finalized via ADR")
+        
+        ContainerDb(product_db, "Product DB", "Relational/NoSQL", "Logical schema for product data")
+        ContainerDb(cart_db, "Cart DB", "Key-Value Store", "Ephemeral cart state")
+        ContainerDb(sale_db, "Sale DB", "Relational/NoSQL", "Logical schema for sale rules")
+        ContainerDb(inventory_db, "Inventory DB", "Relational DB", "Logical schema for ACID-compliant inventory and reservations")
+        ContainerDb(payment_db, "Payment DB", "Relational DB", "Logical schema for payment logs")
+        ContainerDb(order_db, "Order DB", "Relational DB", "Logical schema for order records")
+    }
+    
+    System_Ext(payment_gateway, "Payment Gateway", "Stripe/PayPal")
+    System_Ext(shipping, "Shipping Provider", "FedEx/UPS")
+    System_Ext(idp, "Identity Provider", "Auth0/Cognito")
+    
+    Rel(customer, idp, "Authenticates via", "HTTPS")
+    Rel(customer, cdn_waf, "Presents token, visits site", "HTTPS")
+    Rel(cdn_waf, load_balancer, "Forwards dynamic traffic", "HTTPS")
+    Rel(load_balancer, api_gateway, "Distributes traffic", "HTTPS")
+    
+    Rel(api_gateway, product_svc, "Routes product queries", "Sync/HTTPS")
+    Rel(api_gateway, cart_svc, "Routes cart updates", "Sync/HTTPS")
+    Rel(api_gateway, sale_svc, "Routes sale queries", "Sync/HTTPS")
+    Rel(api_gateway, checkout_svc, "Initiates checkout", "Sync/HTTPS")
+    
+    Rel(product_svc, cache_cluster, "Reads from", "TCP")
+    Rel(product_svc, product_db, "Reads from", "TCP")
+    Rel(cart_svc, cart_db, "Reads/Writes", "TCP")
+    Rel(sale_svc, sale_db, "Reads from", "TCP")
+    
+    Rel(checkout_svc, inventory_svc, "1. Request Reservation", "Sync/gRPC or HTTPS")
+    Rel(checkout_svc, payment_svc, "2. Process Payment", "Sync/gRPC or HTTPS")
+    Rel(checkout_svc, message_broker, "3. Publish CheckoutCompleted Event (via Outbox)", "Async/TCP")
+    
+    Rel(inventory_svc, inventory_db, "Locks & Updates inventory", "TCP")
+    Rel(inventory_svc, message_broker, "Publishes Reservation Released", "Async/TCP")
+    
+    Rel(payment_svc, payment_db, "Records transaction", "TCP")
+    Rel(payment_svc, payment_gateway, "Charges card", "Sync/HTTPS")
+    Rel(payment_svc, message_broker, "Publishes PaymentFailed Event", "Async/TCP")
+    
+    Rel(message_broker, order_svc, "Consumes CheckoutCompleted", "Async/TCP")
+    Rel(order_svc, order_db, "Writes order state", "TCP")
+    
+    Rel(message_broker, fulfilment_svc, "Consumes OrderConfirmed", "Async/TCP")
+    Rel(fulfilment_svc, shipping, "Requests shipment", "Sync/HTTPS")
+    
+    Rel(message_broker, notification_svc, "Consumes events", "Async/TCP")
+    
+    Rel(message_broker, inventory_svc, "Consumes PaymentFailed to release", "Async/TCP")

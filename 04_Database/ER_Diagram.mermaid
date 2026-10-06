@@ -1,0 +1,61 @@
+erDiagram
+    checkout_checkout_attempts {
+        uuid checkout_id PK
+        text customer_id
+        text status
+        uuid reservation_id UK
+        uuid payment_id UK
+        bigint amount_minor
+        jsonb delivery_address
+    }
+    checkout_checkout_items {
+        uuid item_id PK
+        uuid checkout_id FK
+        text sku
+    }
+    inventory_inventory_items {
+        text sku PK
+        integer available_stock
+        integer reserved_stock
+        integer sold_stock
+    }
+    inventory_reservations {
+        uuid reservation_id PK
+        uuid checkout_id UK
+        text sku FK
+        text status
+        uuid payment_id UK
+        timestamptz expires_at
+    }
+    payment_payment_transactions {
+        uuid payment_id PK
+        uuid checkout_id UK
+        uuid reservation_id UK
+        bigint amount_minor
+        text status
+    }
+    payment_refunds {
+        uuid refund_id PK
+        uuid payment_id FK
+        bigint amount_minor
+        text status
+    }
+    orders_orders {
+        uuid order_id PK
+        uuid checkout_id UK
+        text customer_id
+        uuid reservation_id UK
+        uuid payment_id UK
+        text status
+        bigint amount_minor
+        jsonb delivery_address
+    }
+    orders_order_items {
+        uuid item_id PK
+        uuid order_id FK
+        text sku
+    }
+    checkout_checkout_attempts ||--o{ checkout_checkout_items : contains
+    inventory_inventory_items ||--o{ inventory_reservations : contains
+    payment_payment_transactions ||--o{ payment_refunds : contains
+    orders_orders ||--o{ orders_order_items : contains

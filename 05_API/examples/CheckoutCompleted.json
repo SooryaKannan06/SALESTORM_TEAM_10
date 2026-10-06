@@ -1,0 +1,33 @@
+{
+  "event_id": "55555555-5555-4555-8555-000000000001",
+  "schema_version": 1,
+  "occurred_at": "2026-10-05T06:40:12Z",
+  "correlation_id": "11111111-1111-4111-8111-111111111111",
+  "aggregate_id": "11111111-1111-4111-8111-111111111111",
+  "aggregate_version": 1,
+  "event_type": "CheckoutCompleted",
+  "data": {
+    "checkout_id": "11111111-1111-4111-8111-111111111111",
+    "customer_id": "demo-customer-001",
+    "reservation_id": "22222222-2222-4222-8222-222222222222",
+    "reservation_status": "COMMITTED",
+    "payment_id": "33333333-3333-4333-8333-333333333333",
+    "payment_status": "CAPTURED",
+    "items": [
+      {
+        "sku": "FLASH-001",
+        "quantity": 1,
+        "unit_price_minor": 99900
+      }
+    ],
+    "amount_minor": 99900,
+    "currency": "INR",
+    "delivery_address": {
+      "street": "12 Example Street",
+      "city": "Coimbatore",
+      "state": "Tamil Nadu",
+      "postal_code": "641001",
+      "country": "IN"
+    }
+  }
+}

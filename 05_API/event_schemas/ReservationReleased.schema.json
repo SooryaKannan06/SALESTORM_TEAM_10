@@ -1,0 +1,83 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "event_type": {
+      "const": "ReservationReleased"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "checkout_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer",
+          "enum": [
+            1
+          ]
+        },
+        "status": {
+          "enum": [
+            "RELEASED"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reservation_id",
+        "checkout_id",
+        "sku",
+        "quantity",
+        "status",
+        "reason"
+      ]
+    }
+  },
+  "required": [
+    "event_id",
+    "schema_version",
+    "occurred_at",
+    "correlation_id",
+    "aggregate_id",
+    "aggregate_version",
+    "event_type",
+    "data"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReservationReleased"
+}

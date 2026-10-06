@@ -1,0 +1,16 @@
+{
+  "event_id": "55555555-5555-4555-8555-000000000006",
+  "schema_version": 1,
+  "occurred_at": "2026-10-05T06:40:12Z",
+  "correlation_id": "11111111-1111-4111-8111-111111111111",
+  "aggregate_id": "77777777-7777-4777-8777-777777777777",
+  "aggregate_version": 1,
+  "event_type": "ShipmentUpdated",
+  "data": {
+    "shipment_id": "77777777-7777-4777-8777-777777777777",
+    "order_id": "44444444-4444-4444-8444-444444444444",
+    "status": "OUT_FOR_DELIVERY",
+    "carrier": "MockCarrier",
+    "tracking_number": "MOCK001"
+  }
+}

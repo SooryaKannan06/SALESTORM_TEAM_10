@@ -1,0 +1,65 @@
+graph TB
+    subgraph Client & Edge Infrastructure
+        Client["Client (Web / Mobile App)"]
+        Edge["CDN / WAF"]
+        LB["Load Balancer"]
+        APIGW["API Gateway"]
+    end
+
+    subgraph "Checkout Module (Orchestrator Boundary)"
+        CheckoutSvc["Checkout Service<br/>(Owns: CheckoutAttempt, Orchestration)"]
+        CheckoutDB[("Checkout Local DB<br/>(Relational DB - Option)")]
+        CheckoutOutbox[("Checkout Local Outbox Table")]
+        OutboxRelay["Outbox Relay Worker"]
+    end
+
+    subgraph "Inventory Module (Stock Authority)"
+        InvSvc["Inventory Service<br/>(Owns: InventoryItem, Reservation)"]
+        InvDB[("Inventory Local DB<br/>(Relational DB - Option)")]
+    end
+
+    subgraph "Payment Module (Financial Authority)"
+        PaySvc["Payment Service<br/>(Owns: PaymentTransaction)"]
+        PayDB[("Payment Local DB<br/>(Relational DB - Option)")]
+        ExtGateways["External Payment Gateway"]
+    end
+
+    subgraph "Asynchronous Event Fabric"
+        Broker["Message Broker<br/>(Illustrative: Kafka / RabbitMQ)"]
+    end
+
+    subgraph "Order Module (Order Management Boundary)"
+        OrderSvc["Order Service<br/>(Owns: Order Aggregate)"]
+        OrderDB[("Order Local DB<br/>(Relational DB - Option)")]
+    end
+
+    subgraph "Downstream Consumers"
+        Fulfilment["Fulfilment Service"]
+        Notification["Notification Service"]
+    end
+
+    %% Ingress Flow
+    Client --> Edge
+    Edge --> LB
+    LB --> APIGW
+    APIGW -->|HTTPS / REST| CheckoutSvc
+
+    %% Critical Synchronous Path (Orchestrated by Checkout)
+    CheckoutSvc -->|"1. SYNC: Reserve Stock"| InvSvc
+    CheckoutSvc -->|"2. SYNC: Immediate Payment Decision"| PaySvc
+    PaySvc -->|HTTPS / mTLS| ExtGateways
+
+    %% Local State & Outbox Boundary (Strictly Local to Checkout)
+    CheckoutSvc --- CheckoutDB
+    CheckoutSvc --- CheckoutOutbox
+    CheckoutOutbox --> OutboxRelay
+    InvSvc --- InvDB
+    PaySvc --- PayDB
+
+    %% Asynchronous Path
+    OutboxRelay -->|"3. ASYNC: Publish CheckoutCompleted"| Broker
+    Broker -->|"4. ASYNC: Consume CheckoutCompleted"| OrderSvc
+    OrderSvc --- OrderDB
+    OrderSvc -->|"5. ASYNC: Publish OrderConfirmed"| Broker
+    Broker --> Fulfilment
+    Broker --> Notification

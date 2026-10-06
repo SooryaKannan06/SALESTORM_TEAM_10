@@ -1,0 +1,18 @@
+C4Context
+    title System Context Diagram for SALESTORM E-Commerce Platform
+
+    Person(customer, "Customer", "A customer competing to purchase a flash-sale product.")
+    
+    System(salestorm, "SALESTORM Platform", "The high-scale e-commerce flash-sale system handling product discovery, inventory reservation, checkout, and order processing.")
+    
+    System_Ext(payment_gateway, "Payment Gateway", "External payment provider (e.g., Stripe, PayPal) processing credit card transactions.")
+    System_Ext(shipping_provider, "Shipping Provider", "External logistics partner responsible for delivery.")
+    System_Ext(notification_provider, "Notification Provider", "External service (e.g., Twilio, SendGrid) for SMS and Email notifications.")
+    System_Ext(identity_provider, "Identity Provider", "External Auth service (e.g., Auth0) for customer authentication.")
+
+    Rel(customer, identity_provider, "Authenticates via", "HTTPS")
+    Rel(customer, salestorm, "Presents token, browses, and buys", "HTTPS")
+    
+    Rel(salestorm, payment_gateway, "Processes payments securely", "HTTPS")
+    Rel(salestorm, shipping_provider, "Sends fulfillment requests and gets tracking info", "HTTPS")
+    Rel(salestorm, notification_provider, "Sends order and shipping updates", "HTTPS")

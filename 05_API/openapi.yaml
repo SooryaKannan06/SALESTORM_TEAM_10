@@ -1,0 +1,1794 @@
+openapi: 3.0.3
+info:
+  title: SALESTORM Member 3 REST Contract
+  version: 1.0.0
+  description: Design contract; routes are proposed and not deployed. Internal operations
+    require service identity. One SKU/unit per checkout.
+servers:
+- url: http://localhost:3000
+  description: Local mock/demo only; deployed systems use HTTPS
+paths:
+  /api/v1/checkout:
+    post:
+      operationId: startCheckout
+      summary: Accepted checkout; poll status. SUCCESS still allows order creation
+        pending. Customer identity and prices are derived server-side.
+      description: Accepted checkout; poll status. SUCCESS still allows order creation
+        pending. Customer identity and prices are derived server-side.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Accepted checkout; poll status. SUCCESS still allows order
+            creation pending. Customer identity and prices are derived server-side.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+  /api/v1/checkout/{checkout_id}:
+    get:
+      operationId: getCheckout
+      summary: Retrieve own checkout and current progress; order_id appears when known.
+      description: Retrieve own checkout and current progress; order_id appears when
+        known.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: checkout_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Retrieve own checkout and current progress; order_id appears
+            when known.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/inventory/reservations:
+    post:
+      operationId: reserveInventory
+      summary: 'Checkout only: reserve one unit for 300 seconds; no client-controlled
+        TTL.'
+      description: 'Checkout only: reserve one unit for 300 seconds; no client-controlled
+        TTL.'
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: 'Checkout only: reserve one unit for 300 seconds; no client-controlled
+            TTL.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReserveRequest'
+  /v1/inventory/reservations/{reservation_id}:
+    get:
+      operationId: getReservation
+      summary: 'Checkout/recovery only: authoritative reservation status.'
+      description: 'Checkout/recovery only: authoritative reservation status.'
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: reservation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 'Checkout/recovery only: authoritative reservation status.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/inventory/reservations/{reservation_id}/commit:
+    post:
+      operationId: commitReservation
+      summary: 'Checkout only: verified captured payment, matching checkout, active
+        hold; returns COMMITTED. Idempotent replay succeeds for same bound payment.'
+      description: 'Checkout only: verified captured payment, matching checkout, active
+        hold; returns COMMITTED. Idempotent replay succeeds for same bound payment.'
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: reservation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 'Checkout only: verified captured payment, matching checkout,
+            active hold; returns COMMITTED. Idempotent replay succeeds for same bound
+            payment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitRequest'
+  /v1/inventory/reservations/{reservation_id}/release:
+    post:
+      operationId: releaseReservation
+      summary: 'Checkout only: releases HELD once. COMMITTED returns 409. Terminal
+        RELEASED/EXPIRED is a safe no-op.'
+      description: 'Checkout only: releases HELD once. COMMITTED returns 409. Terminal
+        RELEASED/EXPIRED is a safe no-op.'
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: reservation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 'Checkout only: releases HELD once. COMMITTED returns 409.
+            Terminal RELEASED/EXPIRED is a safe no-op.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseRequest'
+  /v1/payments:
+    post:
+      operationId: processPayment
+      summary: 'Checkout only: create/reuse durable payment intent. CAPTURED, PENDING_3DS,
+        UNKNOWN or definitive failure is represented in the resource status.'
+      description: 'Checkout only: create/reuse durable payment intent. CAPTURED,
+        PENDING_3DS, UNKNOWN or definitive failure is represented in the resource
+        status.'
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: 'Checkout only: create/reuse durable payment intent. CAPTURED,
+            PENDING_3DS, UNKNOWN or definitive failure is represented in the resource
+            status.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+  /v1/payments/status:
+    get:
+      operationId: getPaymentStatus
+      summary: 'Checkout recovery only: look up payment by checkout_id; a missing
+        record is not proof that no provider operation exists.'
+      description: 'Checkout recovery only: look up payment by checkout_id; a missing
+        record is not proof that no provider operation exists.'
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: checkout_id
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 'Checkout recovery only: look up payment by checkout_id; a
+            missing record is not proof that no provider operation exists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/payments/{payment_id}/refunds:
+    post:
+      operationId: requestRefund
+      summary: 'Checkout recovery only: one full refund; amount comes from captured
+        payment. Requires definitive reservation rejection; no refund on ambiguous
+        commit.'
+      description: 'Checkout recovery only: one full refund; amount comes from captured
+        payment. Requires definitive reservation rejection; no refund on ambiguous
+        commit.'
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: payment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: 'Checkout recovery only: one full refund; amount comes from
+            captured payment. Requires definitive reservation rejection; no refund
+            on ambiguous commit.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+    get:
+      operationId: getRefund
+      summary: Retrieve full-refund progress; refund success requires provider confirmation.
+      description: Retrieve full-refund progress; refund success requires provider
+        confirmation.
+      security:
+      - ServiceBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: payment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Retrieve full-refund progress; refund success requires provider
+            confirmation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/payments/webhooks:
+    post:
+      operationId: receivePaymentWebhook
+      summary: Normalized mock-provider contract. Verify signature/timestamp and durably
+        process or enqueue before acknowledging. Real providers require adapter mapping.
+      description: Normalized mock-provider contract. Verify signature/timestamp and
+        durably process or enqueue before acknowledging. Real providers require adapter
+        mapping.
+      security:
+      - WebhookSignature: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Normalized mock-provider contract. Verify signature/timestamp
+            and durably process or enqueue before acknowledging. Real providers require
+            adapter mapping.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ack'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Webhook'
+  /api/v1/orders/{order_id}:
+    get:
+      operationId: getOrder
+      summary: Retrieve own order; creation is event-only, with no customer POST /orders.
+      description: Retrieve own order; creation is event-only, with no customer POST
+        /orders.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Retrieve own order; creation is event-only, with no customer
+            POST /orders.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/products:
+    get:
+      operationId: listProducts
+      summary: List catalogue; stock hint is advisory.
+      description: List catalogue; stock hint is advisory.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: cursor
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List catalogue; stock hint is advisory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/products/{sku}:
+    get:
+      operationId: getProduct
+      summary: Read current catalogue price; checkout validates its own authoritative
+        price snapshot.
+      description: Read current catalogue price; checkout validates its own authoritative
+        price snapshot.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: sku
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Read current catalogue price; checkout validates its own authoritative
+            price snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/cart:
+    get:
+      operationId: getCart
+      summary: Read own ephemeral cart; cart never holds inventory.
+      description: Read own ephemeral cart; cart never holds inventory.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Read own ephemeral cart; cart never holds inventory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/cart/items:
+    post:
+      operationId: putCartItem
+      summary: Set one cart SKU quantity to one (not increment); operation is naturally
+        idempotent. Key mismatch detection is retained with cart metadata.
+      description: Set one cart SKU quantity to one (not increment); operation is
+        naturally idempotent. Key mismatch detection is retained with cart metadata.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Set one cart SKU quantity to one (not increment); operation
+            is naturally idempotent. Key mismatch detection is retained with cart
+            metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseItem'
+  /api/v1/orders/{order_id}/tracking:
+    get:
+      operationId: getTracking
+      summary: Read own tracking state; PENDING until shipment is created.
+      description: Read own tracking state; PENDING until shipment is created.
+      security:
+      - CustomerBearer: []
+      parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Read own tracking state; PENDING until shipment is created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tracking'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Business/state conflict or key payload mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Admission limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable; do not infer business failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        correlation_id:
+          type: string
+          format: uuid
+        retryable:
+          type: boolean
+      required:
+      - code
+      - message
+      - correlation_id
+      - retryable
+      example:
+        code: OUT_OF_STOCK
+        message: No unit available for reservation.
+        correlation_id: 11111111-1111-4111-8111-111111111111
+        retryable: false
+    Address:
+      type: object
+      additionalProperties: false
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+      required:
+      - street
+      - city
+      - state
+      - postal_code
+      - country
+    PurchaseItem:
+      type: object
+      additionalProperties: false
+      properties:
+        sku: &id001
+          type: string
+          minLength: 1
+        quantity: &id002
+          type: integer
+          enum:
+          - 1
+      required:
+      - sku
+      - quantity
+      example:
+        sku: FLASH-001
+        quantity: 1
+    PricedItem:
+      type: object
+      additionalProperties: false
+      properties:
+        sku: *id001
+        quantity: *id002
+        unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+      - sku
+      - quantity
+      - unit_price_minor
+    CheckoutRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseItem'
+          minItems: 1
+          maxItems: 1
+        payment_token:
+          type: string
+          minLength: 1
+        delivery_address:
+          $ref: '#/components/schemas/Address'
+      required:
+      - items
+      - payment_token
+      - delivery_address
+      example:
+        items:
+        - sku: FLASH-001
+          quantity: 1
+        payment_token: mock_token_success
+        delivery_address: &id003
+          street: 12 Example Street
+          city: Coimbatore
+          state: Tamil Nadu
+          postal_code: '641001'
+          country: IN
+    Checkout:
+      type: object
+      additionalProperties: false
+      properties:
+        checkout_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - INITIATED
+          - RESERVING_INVENTORY
+          - INVENTORY_RESERVED
+          - PROCESSING_PAYMENT
+          - AWAITING_PAYMENT_ACTION
+          - PAYMENT_UNKNOWN
+          - COMMITTING_INVENTORY
+          - SUCCESS
+          - FAILED_OUT_OF_STOCK
+          - FAILED_PAYMENT_DECLINED
+          - REFUND_PENDING
+          - REFUNDED
+        reservation_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        amount_minor:
+          type: integer
+          format: int64
+          minimum: 1
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+        next_action_url:
+          type: string
+          format: uri
+      required:
+      - checkout_id
+      - status
+      - amount_minor
+      - currency
+      example:
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        status: SUCCESS
+        reservation_id: 22222222-2222-4222-8222-222222222222
+        payment_id: 33333333-3333-4333-8333-333333333333
+        amount_minor: 99900
+        currency: INR
+    ReserveRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        checkout_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        quantity:
+          type: integer
+          enum:
+          - 1
+      required:
+      - checkout_id
+      - sku
+      - quantity
+      example:
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        sku: FLASH-001
+        quantity: 1
+    Reservation:
+      type: object
+      additionalProperties: false
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        checkout_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        quantity:
+          type: integer
+          enum:
+          - 1
+        status:
+          type: string
+          enum:
+          - HELD
+          - COMMITTED
+          - RELEASED
+          - EXPIRED
+        expires_at:
+          type: string
+          format: date-time
+        payment_id:
+          type: string
+          format: uuid
+      required:
+      - reservation_id
+      - checkout_id
+      - sku
+      - quantity
+      - status
+      - expires_at
+      example:
+        reservation_id: 22222222-2222-4222-8222-222222222222
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        sku: FLASH-001
+        quantity: 1
+        status: HELD
+        expires_at: '2026-10-05T06:45:00Z'
+    CommitRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        checkout_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+      required:
+      - checkout_id
+      - payment_id
+      example:
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        payment_id: 33333333-3333-4333-8333-333333333333
+    ReleaseRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        checkout_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          enum:
+          - PAYMENT_DECLINED
+          - CUSTOMER_CANCELLED
+      required:
+      - checkout_id
+      - reason
+      example:
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        reason: PAYMENT_DECLINED
+    PaymentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        checkout_id:
+          type: string
+          format: uuid
+        reservation_id:
+          type: string
+          format: uuid
+        amount_minor:
+          type: integer
+          format: int64
+          minimum: 1
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+        payment_token:
+          type: string
+          minLength: 1
+      required:
+      - checkout_id
+      - reservation_id
+      - amount_minor
+      - currency
+      - payment_token
+      example:
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        reservation_id: 22222222-2222-4222-8222-222222222222
+        amount_minor: 99900
+        currency: INR
+        payment_token: mock_token_success
+    Payment:
+      type: object
+      additionalProperties: false
+      properties:
+        payment_id:
+          type: string
+          format: uuid
+        checkout_id:
+          type: string
+          format: uuid
+        reservation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - INITIATED
+          - PENDING_3DS
+          - AUTHORIZED
+          - CAPTURED
+          - UNKNOWN
+          - DECLINED
+          - FAILED
+          - REFUNDED
+        amount_minor:
+          type: integer
+          format: int64
+          minimum: 1
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+        provider_reference:
+          type: string
+        next_action_url:
+          type: string
+          format: uri
+      required:
+      - payment_id
+      - checkout_id
+      - reservation_id
+      - status
+      - amount_minor
+      - currency
+      example:
+        payment_id: 33333333-3333-4333-8333-333333333333
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        reservation_id: 22222222-2222-4222-8222-222222222222
+        status: CAPTURED
+        amount_minor: 99900
+        currency: INR
+        provider_reference: mock_charge_001
+    RefundRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          enum:
+          - RESERVATION_EXPIRED
+          - RESERVATION_RELEASED
+      required:
+      - reason
+      example:
+        reason: RESERVATION_EXPIRED
+    Refund:
+      type: object
+      additionalProperties: false
+      properties:
+        refund_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - PENDING
+          - UNKNOWN
+          - SUCCEEDED
+          - FAILED
+        amount_minor:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+      - refund_id
+      - payment_id
+      - status
+      - amount_minor
+      example:
+        refund_id: 66666666-6666-4666-8666-666666666666
+        payment_id: 33333333-3333-4333-8333-333333333333
+        status: PENDING
+        amount_minor: 99900
+    Webhook:
+      type: object
+      additionalProperties: false
+      properties:
+        provider_event_id:
+          type: string
+        payment_id:
+          type: string
+          format: uuid
+        provider_reference:
+          type: string
+        status:
+          type: string
+          enum:
+          - AUTHORIZED
+          - CAPTURED
+          - DECLINED
+          - FAILED
+          - REFUNDED
+        occurred_at:
+          type: string
+          format: date-time
+      required:
+      - provider_event_id
+      - payment_id
+      - provider_reference
+      - status
+      - occurred_at
+      example:
+        provider_event_id: mock_evt_001
+        payment_id: 33333333-3333-4333-8333-333333333333
+        provider_reference: mock_charge_001
+        status: CAPTURED
+        occurred_at: '2026-10-05T06:40:10Z'
+    Ack:
+      type: object
+      additionalProperties: false
+      properties:
+        accepted:
+          type: boolean
+      required:
+      - accepted
+      example:
+        accepted: true
+    Order:
+      type: object
+      additionalProperties: false
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        checkout_id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+        reservation_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - CONFIRMED
+          - PROCESSING
+          - SHIPPED
+          - OUT_FOR_DELIVERY
+          - DELIVERED
+          - CANCELLED
+          - REFUNDED
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricedItem'
+          minItems: 1
+          maxItems: 1
+        amount_minor:
+          type: integer
+          format: int64
+          minimum: 1
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+        delivery_address:
+          $ref: '#/components/schemas/Address'
+      required:
+      - order_id
+      - checkout_id
+      - customer_id
+      - reservation_id
+      - payment_id
+      - status
+      - items
+      - amount_minor
+      - currency
+      - delivery_address
+      example:
+        order_id: 44444444-4444-4444-8444-444444444444
+        checkout_id: 11111111-1111-4111-8111-111111111111
+        customer_id: demo-customer-001
+        reservation_id: 22222222-2222-4222-8222-222222222222
+        payment_id: 33333333-3333-4333-8333-333333333333
+        status: CONFIRMED
+        items:
+        - sku: FLASH-001
+          quantity: 1
+          unit_price_minor: 99900
+        amount_minor: 99900
+        currency: INR
+        delivery_address: *id003
+    Product:
+      type: object
+      additionalProperties: false
+      properties:
+        sku:
+          type: string
+        name:
+          type: string
+        unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+        availability_hint:
+          type: string
+          enum:
+          - AVAILABLE
+          - LIMITED
+          - OUT_OF_STOCK
+          - UNKNOWN
+      required:
+      - sku
+      - name
+      - unit_price_minor
+      - currency
+      - availability_hint
+      example:
+        sku: FLASH-001
+        name: Flash-sale product
+        unit_price_minor: 99900
+        currency: INR
+        availability_hint: LIMITED
+    ProductList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        next_cursor:
+          type: string
+      required:
+      - items
+      example:
+        items:
+        - sku: FLASH-001
+          name: Flash-sale product
+          unit_price_minor: 99900
+          currency: INR
+          availability_hint: LIMITED
+    Cart:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseItem'
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+      - items
+      - version
+      example:
+        items:
+        - sku: FLASH-001
+          quantity: 1
+        version: 1
+    Tracking:
+      type: object
+      additionalProperties: false
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - PENDING
+          - SHIPPED
+          - OUT_FOR_DELIVERY
+          - DELIVERED
+        carrier:
+          type: string
+        tracking_number:
+          type: string
+      required:
+      - order_id
+      - status
+      example:
+        order_id: 44444444-4444-4444-8444-444444444444
+        status: PENDING
+  securitySchemes:
+    CustomerBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ServiceBearer:
+      type: http
+      scheme: bearer
+      description: Service-scoped token; operation authorization enforced by owner.
+    WebhookSignature:
+      type: apiKey
+      in: header
+      name: X-Webhook-Signature
+      description: Provider signature over raw bytes and timestamp; not a static shared
+        API token.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+      description: Stable per caller/operation; same key with changed request returns
+        409.
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Gateway assigns one if absent; propagated through events.

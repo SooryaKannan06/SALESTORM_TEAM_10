@@ -1,0 +1,48 @@
+sequenceDiagram
+    autonumber
+    participant CheckoutSvc as Checkout Service
+    participant PaySvc as Payment Service
+    participant PayCache as Distributed Cache (Idempotency)
+    participant PayDB as Payment Local DB
+    participant Gateway as External Payment Gateway (Stripe/Adyen)
+    participant Customer as Customer Browser (for 3DS)
+
+    CheckoutSvc->>PaySvc: POST /v1/payments (checkout_id, amount, card_token, Idempotency-Key)
+    activate PaySvc
+
+    PaySvc->>PayCache: Check & SET idempotency_key "PROCESSING"
+    alt Key already exists & COMPLETED
+        PayCache-->>PaySvc: Cached Payment Result
+        PaySvc-->>CheckoutSvc: 200 OK (Previous Payment Result)
+    end
+
+    PaySvc->>PayDB: INSERT INTO payment_transactions (status='INITIATED', amount, checkout_id)
+    PaySvc->>Gateway: POST /v1/charges (Amount, Currency, CardToken, ReturnUrl)
+    activate Gateway
+
+    alt Direct Authorization Succeeded (Immediate Decision)
+        Gateway-->>PaySvc: 200 OK (charge_id, status='CAPTURED')
+        PaySvc->>PayDB: UPDATE payment_transactions SET status='CAPTURED', settled_at=NOW()
+        PaySvc->>PayCache: SET idempotency_key "COMPLETED"
+        PaySvc-->>CheckoutSvc: 200 OK: PaymentResult(status=SUCCESS, tx_id=charge_id)
+
+    else 3D-Secure Challenge Required
+        Gateway-->>PaySvc: 200 OK (status='REQUIRES_ACTION', redirect_url)
+        PaySvc->>PayDB: UPDATE payment_transactions SET status='PENDING_3DS'
+        PaySvc-->>CheckoutSvc: 200 OK (status='CHALLENGE_REQUIRED', redirect_url)
+        CheckoutSvc-->>Customer: 302 Redirect to Bank Authentication Page
+        Customer->>Gateway: Complete SMS OTP / Biometric Verification
+        Gateway->>PaySvc: POST /webhooks/gateway (HMAC Signature, charge_id, status='SUCCEEDED')
+        activate PaySvc
+        PaySvc->>PaySvc: Verify HMAC Signature
+        PaySvc->>PayDB: UPDATE payment_transactions SET status='CAPTURED', settled_at=NOW()
+        deactivate PaySvc
+
+    else Gateway Decline / Insufficient Funds
+        Gateway-->>PaySvc: 402 Card Error (code='INSUFFICIENT_FUNDS')
+        PaySvc->>PayDB: UPDATE payment_transactions SET status='DECLINED', error='INSUFFICIENT_FUNDS'
+        PaySvc->>PayCache: SET idempotency_key "FAILED"
+        PaySvc-->>CheckoutSvc: 402 Payment Required: Declined
+    end
+    deactivate Gateway
+    deactivate PaySvc
